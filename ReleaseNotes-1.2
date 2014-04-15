@@ -1,0 +1,58 @@
+Beta-Release Notes for Version 1.2
+Beta version
+
+April 2004
+
+Very many changes:
+
+New DOM API, conceived by Jon Wakelin and implemented by Jon and
+Alberto Garcia.
+
+New WXML API to write well-formed XML,  by Alberto Garcia
+
+New CML (writing) API, built on top of WXML, contributed by Jon Wakelin.
+
+Documentation for the new features is still quite sparse.
+---------------------------------------------------------------
+
+Changes for 1.2g: (April 28, 2004)
+
+SAX
+
+* New optional argument "record_size" in open_xmlfile. The default record 
+length is 65536, but for overly long lines it might be necessary to specify
+a larger size.
+
+* Wrote "init_" routines to avoid undefined status for the components
+of the buffer, dictionary, and elstack derived types (Fortran90 restriction). 
+They are called just once at the beginning of execution.
+
+The "reset_" routines just zero out the counters in the derived
+types. This leads to substantial savings in overhead.
+
+* Avoided when possible the allocation of temporaries (mostly strings) by
+the compilers. This was particularly acute in the "action" records. The
+typical idiom:
+
+	action =trim("Reading character in name: " // c)
+
+forced the allocation of a temporary.  The number of compiler allocations
+(at least with NAG) has dropped down to just those needed in the processing
+of entities.
+
+* Put the explicit module dependencies in the makefile.
+
+* Increased the standard size of the buffers and dictionaries.
+***** The program now stops when those sizes are not enough.
+
+DOM
+
+Some bug fixes
+
+STRINGS
+
+Fix assign_s_to_s (it could be that source is not allocated)
+
+-------------------------------------------------------------------------
+
+

@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<atom version="0.1">
+
+  <job type="pseudopotential-generation">
+
+  <!-- Note that this configuration is ionic (+2) -->
+  <title>pg Ba with 5s as semicore, 5p in valence -- soft Vf </title>
+  <symbol>Ba</symbol>
+  <pseudo flavor="tm2" core-corrections="no" />
+  <calculation relativistic="yes" spin-polarized="no" xc="ca" />
+  <configuration ncore="9" nvalence="4" >
+     <shell n="5" l="0" occupation="2.00" rc="1.75" />
+     <shell n="5" l="1" occupation="6.00" rc="2.00" />
+     <shell n="5" l="2" occupation="0.00" rc="2.50" />
+     <shell n="4" l="3" occupation="0.00" rc="2.50" />
+  </configuration>
+  <analysis logder="3.0" />
+
+  </job>
+  <job type="pseudopotential-test">
+
+  <!-- Note that this configuration is ionic (+2) -->
+  <title>test Ba </title>
+  <symbol>Ba</symbol>
+  <calculation relativistic="yes" spin-polarized="no" xc="ca" />
+  <configuration ncore="9" nvalence="4" >
+     <shell n="5" l="0" occupation="2.00"  />
+     <shell n="5" l="1" occupation="5.00"  />
+     <shell n="5" l="2" occupation="1.00"  />
+     <shell n="4" l="3" occupation="0.00"  />
+  </configuration>
+
+  </job>
+</atom>

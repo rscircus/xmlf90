@@ -1,0 +1,410 @@
+<HTML>
+  <HEAD>
+    <STYLE>
+        TABLE {align: center; }
+        H1    {color: #ffffff; background: Navy; font-weight: bold; font-family: Tahoma, Verdana; margin: 0px; padding: 2px; }
+        H2    {color: #ffffff; background: #4682B4; font-weight: bold; font-family: Tahoma, Verdana; }
+        TH    {color: #ffffff; background: #4682B4; font-weight: bold; font-family: Tahoma, Verdana; }
+	LI    {font-weight: bold; font-family: Tahoma, Verdana; }
+    </STYLE>
+  </HEAD>
+  <BODY>
+
+<H1>Jumbo90</H1>
+
+<ol>
+<h2><li>What is Jumbo90?</li></h2>
+  <ul>
+    <li>Jumbo90 is a CML formatting Library for Fortran, it provides: </li>
+    <li>Convenience routines to write complete CML elements</li>
+    <li>Convenience routines to write complete STMML elements</li>
+    <li>Optional Indentation of output</li>
+    <li>Checks that tags are properly balanced</li>
+    <li>Checks that attribute names are well formed (i.e. contain only [A-Z a-z 0-9 _ -] and start with [A-Z a-z _]).  
+    <ul>
+      <li>The colon is allowed but should be reserved for namespacing so an error is flagged if more than one colon is present in attribute name</li>
+    </ul>
+    <li>Checks if attribute values contain predefined entities (&lt;, &gt;, &amp, &apos;, &quot;)</li>
+    <li>Checks for duplicate attribute names</li>
+  </ul>
+
+<h2><li>How to use Jumbo90</li></h2>
+<p>Jumbo covers CML, STMML and basic XML.  Below is the full list of subroutine names, followed by the arguments they take. Whenever writing a real*8 or real*4 you can always pass an optional format argument, e.g.<pre>
+	
+	call xml_AddAttribute(file, 'martin','height', 32.1285)
+	call xml_AddAttribute(file, 'martin','height', 32.1285, '(f6.2)')
+
+</pre>
+would add an "height" attribute with a value of "32.1285" to a "martin" element .  In the first case the default format '(f8.3)' would be used, in the second case the user supplied format '(f6.2)' would be used.  Many subroutines can take a number of optional arguments (reflecting the CML schema) therefore the longer 'argument=value' format should be use when calling these subroutines, e.g.,<pre>
+
+	call xml_OpenFile('myFile.xml', file)
+
+</pre>
+</p>
+
+<h2>Notes: </h2>
+<P>Jumbo90 is based on an earlier fortran 77 program called Jumbo77, which was itself based on an existing Java CML parser called JUMBO written by <I>Peter Murray-Rust</I>.  Jumbo90 is now built in a modular fashion allowing output of basic XML, STMML and CML.  The STMML layer builds on the XML.  The CML layer, in turn, builds on the STMML layer.  The base XML writing utilities are now provided by FLIB_XMLWRITE, a set of F90 modules written by <I>Alberto Garcia</I>.</P>
+
+
+<h2><li>Routines</li></h2>
+<h3>General routines</h3> 
+<ol>
+<li><a href="#init">xml_OpenFile</a> - Mandatory Initialization routine </li>
+<li><a href="#close">xml_Close</a> - Mandatory finalization routine, closes channels, etc</li>
+<li><a href="#str">str</a> - utility to convert, floats and integers to character strings</li>
+</ol>
+
+<h3>XML routines</h3>
+<ol>
+<li><a href="#start">xml_NewElement</a> - writes an xml start tag</li>
+<li><a href="#attr">xml_AddAttribute</a> - adds an attribute to a tag</li>
+<li><a href="#text">xml_AddPcdata</a> - adds text to an xml element</li>
+<li><a href="#end">xml_EndElement</a> - writes an xml end tag</li>
+</ol>
+
+
+<h3>STMML routines</h3>
+<ol>
+<li><a href="#stmstart">stmAddStartTag</a></li>
+<li><a href="#stmsca">stmAddScalar</a></li>
+<li><a href="#stmarr">stmAddArray</a></li>
+<li><a href="#stmmat">stmAddMatrix</a></li>
+<li><a href="#stmtri">stmAddTriangle</a></li>
+<li><a href="#stmerr">stmError</a></li>
+<li><a href="#stmmsg">stmMessage</a></li>
+<li><a href="#stmwar">stmWarning</a></li>
+</ol>
+
+<h3>CMLCore routines</h3>
+<ol>
+<li><a href="#cmlmol">cmlAddMolecule</a> - adds a complete CML &lt;molecule&gt; element</li>
+<li><a href="#cmlato">cmlAddAtom</a> - adds a CML &lt;atom&gt; start tag</li>
+<li><a href="#cmlcoo">cmlAddCoordinates</a> - adds coordinate attributes to an &lt;atom&gt; tag</li>
+<li><a href="#cmlcry">cmlAddCrystal</a> - adds a complete CML &lt;crystal&gt; element</li>
+<li><a href="#cmlmet">cmlAddMetadata</a> - adds a complete CML &lt;metadata&gt; element</li>
+<li><a href="#cmllen">cmlAddLength</a>(length, id, atomRef1, atomRef2, fmt)</li>
+<li><a href="#cmlang">cmlAddAngle</a>(angle, id, atomRef1, atomRef2, atomRef3, fmt)</li>
+<li><a href="#cmltor">cmlAddTorsion</a>(torsion, id, atomRef1, atomRef2, atomRef3, atomRef4, fmt)</li>
+<li><a href="#cmleig">cmlAddEigenvalue</a>(n, dim, eigvec, eigval, id, title, dictRef, fmt)</li>
+</ol>
+
+<h3>CMLComa routines (Condensed Matter)</h3>
+<ol>
+<li><a href="#comalat">cmlAddLattice</a> - write a complete lattice element</li>
+<li><a href="#comapro">cmlAddProperty</a> - write a complete property element, containing scalar, array (vector) or matrix value (i.e. it has several interfaces)</li>
+<li><a href="#comapar">cmlAddParameter</a> - adds a complete CML &lt;parameter&gt; element</li>
+</ol>
+
+<h2><li>Subroutine Guide</li></h2>
+
+<!-- GENERAL ROUTINES -->
+<OL>
+  <LI>
+<h4><a name="init">xml_OpenFile(filename, ind, xf)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>filename</td><td>xml filename</td><td>character(len=*)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>ind</td><td>controls indentation of output</td><td>logical</td><td>yes</td><td>.true.</td></tr>
+<tr><td>xf</td><td>xml filename</td><td>type(xmlf_t)</td><td>no</td><td>&nbsp;</td></tr>
+</table></li>
+  </LI>
+  <LI>
+<h4><a name="close">xml_Close(filehandle)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>xf</td><td>xml filehandle</td><td>type(xmlf_t)</td><td>no</td><td>&nbsp;</td></tr>
+</table></li>
+  </LI>
+  <LI>
+
+<h4><a name="str">function str(value, format)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>value</td><td>value to convert to string</td><td>real*8, real*4, integer</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>format</td><td>format for reals</td><td>character(len=*)</td><td>yes</td><td>g22.12</td></tr>
+</table>
+<hr/>
+  </LI>
+</OL>
+
+<!-- XML ROUTINES -->
+<OL>
+  <LI>
+<h4><a name="start">xml_NewElement(xf, name)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>xf</td><td>xml filehandle</td><td>type(xmlf_t)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>name</td><td>name of tag to add</td><td>character(len=*)</td><td>no</td><td>&nbsp;</td></tr>
+</table>
+  </LI>
+  <LI>
+<h4><a name="attr">xml_AddAttribute(xf, name, attname, value)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>xf</td><td>xml filehandle</td><td>type(xmlf_t)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>name</td><td>name of tag</td><td>character(len=*)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>attname</td><td>attribute name</td><td>character(len=*)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>value</td><td>attribute value</td><td>character(len=*) | integer | real*8 | real*4</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>fmt</td><td>format for reals</td><td>character(len=*)</td><td>yes</td><td>f8.3</td></tr>
+</table>
+  </LI>
+  <LI>
+<h4><a name="text">xml_AddPcdata(xf, value)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>xf</td><td>xml filehandle</td><td>type(xmlf_t)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>value</td><td>string to add</td><td>character(len=*) | integer | real*8 | real*4</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>fmt</td><td>format for reals</td><td>character(len=*)</td><td>yes</td><td>f8.3</td></tr>
+</table>
+  </LI>
+  <LI>
+<h4><a name="end">xml_EndElement(xf, name)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>xf</td><td>xml filehandle</td><td>type(xmlf_t)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>name</td><td>name of element to close</td><td>character(len=*)</td><td>no</td><td>&nbsp;</td></tr>
+</table>
+  </LI>
+</OL>
+<hr/>
+
+<!-- STMML ROUTINES -->
+<OL>
+  <LI>
+<h4><a name="stmstart">stmAddStartTag(xf, name, id, title, dictref)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>xf</td><td>xml filehandle</td><td>type(xmlf_t)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>name</td><td>tag name</td><td>character(len=*)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>id</td><td>unique id</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>title</td><td>tag description</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>dictref</td><td>dictionary reference</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+</table>
+  </LI>
+  <LI>
+<h4><a name="stmsca">stmAddScalar(xf, value, id, title, dictref, type, fmt)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>xf</td><td>xml filehandle</td><td>type(xmlf_t)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>value</td><td>the scalar value</td><td>character(len=*) | integer | real*8 | real*4</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>id</td><td>unique id</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>title</td><td>tag description</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>dictref</td><td>dictionary reference</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>fmt</td><td>format for reals</td><td>character(len=*)</td><td>yes</td><td>f8.3</td></tr>
+</table>
+  </LI>
+  <LI>
+<h4><a name="stmarr">stmAddArray(xf, nvalue, array, id, title, dictref, type|units, delim|fmt)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>xf</td><td>xml filehandle</td><td>type(xmlf_t)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>nvalue</td><td>length of array</td><td>integer</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>array</td><td>the array</td><td>character(len=*) | integer | real*8 | real*4</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>id</td><td>unique id</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>title</td><td>tag description</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>dictref</td><td>dictionary reference</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>fmt</td><td>format for reals</td><td>character(len=*)</td><td>yes</td><td>f8.3</td></tr>
+</table>
+  </LI>
+  <LI>
+<h4><a name="stmmat">stmAddMatrix(xf, nrows, ncols, dim, matrix, id, title, dictref, units, fmt)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>xf</td><td>xml filehandle</td><td>type(xmlf_t)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>nrows</td><td>number of rows</td><td>integer</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>ncols</td><td>number of columns</td><td>integer</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>dim</td><td>fastest dimension</td><td>integer</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>matrix</td><td>the matrix</td><td>character(len=*) | integer | real*8 | real*4</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>id</td><td>unique id</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>title</td><td>tag description</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>dictref</td><td>dictionary reference</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>fmt</td><td>format for reals</td><td>character(len=*)</td><td>yes</td><td>f8.3</td></tr>
+</table>
+  </LI>
+  <LI>
+<h4><a name="stmtri">stmAddTriangle(xf, nvalue, array, id, title, dictref, units, fmt)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>xf</td><td>xml filehandle</td><td>type(xmlf_t)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>nvalue</td><td>length of array</td><td>integer</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>array</td><td>the array</td><td>character(len=*) | integer | real*8 | real*4</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>id</td><td>unique id</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>title</td><td>tag description</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>dictref</td><td>dictionary reference</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>fmt</td><td>format for reals</td><td>character(len=*)</td><td>yes</td><td>f8.3</td></tr>
+</table>
+  </LI>
+  <LI>
+<h4><a name="stmerr">stmAddError(xf, msg, id, title, dictRef)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>xf</td><td>xml filehandle</td><td>type(xmlf_t)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>msg</td><td>length of array</td><td>character(len=*)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>id</td><td>unique id</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>title</td><td>tag description</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>dictref</td><td>dictionary reference</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+</table>
+  </LI>
+  <LI>
+<h4><a name="stmmsg">stmAddMessage(xf, msg, id, title, dictRef)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>xf</td><td>xml filehandle</td><td>type(xmlf_t)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>msg</td><td>length of array</td><td>character(len=*)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>id</td><td>unique id</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>title</td><td>tag description</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>dictref</td><td>dictionary reference</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+</table>
+  </LI>
+  <LI>
+<h4><a name="stmerr">stmAddWarning(xf, msg, id, title, dictRef)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>xf</td><td>xml filehandle</td><td>type(xmlf_t)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>msg</td><td>length of array</td><td>character(len=*)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>id</td><td>unique id</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>title</td><td>tag description</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>dictref</td><td>dictionary reference</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+</table>
+  </LI>
+</OL>
+<hr/>
+
+<!-- CML ROUTINES -->
+<OL>
+  <LI>
+<h4><a name="cmlmol">cmlAddMolecule(xf, natoms, elements, coords, style, id, title, dictref, fmt)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>xf</td><td>xml filehandle</td><td>type(xmlf_t)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>natoms</td><td>number of atoms</td><td>integer</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>elements(natoms)</td><td>list of atomic symbols</td><td>character(len=2)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>coords(3, natoms)</td><td>atomic coordinates</td><td>real*8 | real*4</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>style</td><td><a href="#style">CML output style</a> (x3 | xFrac | xyz3 | xyzFrac)</td><td>character(len=*)</td><td>yes</td><td>x3</td></tr>
+<tr><td>id</td><td>unique id</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>title</td><td>tag description</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>dictref</td><td>dictionary reference</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>fmt</td><td>format for reals</td><td>character(len=*)</td><td>yes</td><td>f8.3</td></tr>
+</table>
+  </LI>
+  <LI>
+<h4><a name="cmlato">cmlAddAtom(xf, elem, id, charge, hCount, occupancy, fmt)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>xf</td><td>xml filehandle</td><td>type(xmlf_t)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>elem</td><td>atomic symbol</td><td>character(len=2)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>id</td><td>unique id</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>charge</td><td>formal charge</td><td>integer</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>hCount</td><td>hydrogen count</td><td>integer</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>occupancy</td><td>site occupancy</td><td>real*8 | real*4</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>fmt</td><td>format for occupancy</td><td>character(len=*)</td><td>yes</td><td>f8.3</td></tr>
+</table>
+  </LI>
+  <LI>
+<h4><a name="cmlcoo">cmlAddCoordinates(xf, x, y, z, style, fmt)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>xf</td><td>xml filehandle</td><td>type(xmlf_t)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>x</td><td><i>x</i> coordinate in cartesian format</td><td>real*8 | real*4</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>y</td><td><i>y</i> coordinate in cartesian format</td><td>real*8 | real*4</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>z</td><td><i>z</i> coordinate in cartesian format</td><td>real*8 | real*4</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>style</td><td><a href="#style">CML output style</a><br>(x3 | xFrac | xyz3 | xyzFrac | xy2)</td><td>character(len=*)</td><td>yes</td><td>x3</td></tr>
+<tr><td>fmt</td><td>format for coordinates</td><td>character(len=*)</td><td>yes</td><td>f8.3</td></tr>
+</table>
+  </LI>
+  <LI>
+<h4><a name="cmlcry">cmlAddcrystal(xf, a, b, c, alpha, beta, gamma, id, title, dictref, lenunits, angunits, fmt)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>xf</td><td>xml filehandle</td><td>type(xmlf_t)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>a</td><td>lattice parameter <i>a</i></td><td>real*8 | real*4</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>b</td><td>lattice parameter <i>b</i></td><td>real*8 | real*4</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>c</td><td>lattice parameter <i>c</i></td><td>real*8 | real*4</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>alpha</td><td>lattice angle <i>alpha</i></td><td>real*8 | real*4</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>beta</td><td>lattice angle <i>beta</i></td><td>real*8 | real*4</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>gamma</td><td>lattice angle <i>gamma</i></td><td>real*8 | real*4</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>lenunits</td><td>units for lattice parameters</td><td>character(len=*)</td><td>yes</td><td>angstrom</td></tr>
+<tr><td>angunits</td><td>units for lattice angles</td><td>character(len=*)</td><td>yes</td><td>degree</td></tr>
+<tr><td>id</td><td>unique id</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>title</td><td>tag description</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>dictref</td><td>dictionary reference</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>fmt</td><td>format for reals</td><td>character(len=*)</td><td>yes</td><td>f8.3</td></tr>
+</table>
+  </LI>
+  <li>
+  <h4><a name="cmlmet">cmlAddMetadata(xf, name, content, conv)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>xf</td><td>xml filehandle</td><td>type(xmlf_t)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>name</td><td>name  (eg author)</td><td>character(len=*)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>content</td><td>value (eg Jon Wakelin)</td><td>character(len=*)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>conv</td><td>a convention</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+</table>
+  </LI>
+  <LI>
+<h4><a name="comalat">cmlAddLattice(xf, cell, units, title, id, dictref, conv, lattType, spaceType)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>xf</td><td>xml filehandle</td><td>type(xmlf_t)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>cell(3,3)</td><td>the lattice vectors</td><td>real*8 | real*4</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>units</td><td>units for lattice vectors</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>title</td><td>tag description</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>id</td><td>unique id</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>dictref</td><td>dictionary reference</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>conv</td><td>a convention</td><td>character(len=*)</td><td>yes</td><td>f8.3</td></tr>
+<tr><td>lattType</td><td>lattice type (primitive |full)</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>spaceType</td><td>space type (real | reciprocal) </td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+</table>
+  </LI>
+  <LI>
+<h4><a name="comapro">cmlAddProperty(xf, property, nvalues, ncols, nrows, dim, id, title, conv, dictref, ref, units, fmt)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>xf</td><td>xml filehandle</td><td>type(xmlf_t)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>property</td><td>a scalar, array or matrix property.  Yes it takes all three, but see next three arguments.</td><td>charcter(len=*) | integer | real*8 | real*4</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>nvalue</td><td>number of value for vector</td><td>integer</td><td>no if writing a vector</td><td>&nbsp;</td></tr>
+<tr><td>ncols</td><td>number of rows for matrix</td><td>integer</td><td>no if writing a matrix</td><td>&nbsp;</td></tr>
+<tr><td>nrows</td><td>number of rows for matrix</td><td>integer</td><td>no if writing a matrix</td><td>&nbsp;</td></tr>
+<tr><td>dim</td><td>number of the fastest growing dimension in the matrix</td><td>integer</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>id</td><td>unique id</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>title</td><td>tag description</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>conv</td><td>a convention</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>dictref</td><td>dictionary reference</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>ref</td><td>refernce to an atom (via the atom &apos;id&apos; attribute)</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>units</td><td>units for the property</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>fmt</td><td>format for reals</td><td>character(len=*)</td><td>yes</td><td>f8.3</td></tr>
+</table>
+  </LI>
+  
+    <LI>
+<h4><a name="comapar">cmlAddParameter(xf, value, name, id, title, conv, cons, dictref, ref, role, units, fmt)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>xf</td><td>xml filehandle</td><td>type(xmlf_t)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>value</td><td>the parameter</td><td>charcter(len=*) | integer | real*8 | real*4 | logical</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>id</td><td>unique id</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>title</td><td>tag description</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>conv</td><td>a convention</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>cons</td><td>a constraint</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>role</td><td>the role of the parameter</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>dictref</td><td>dictionary reference</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>ref</td><td>refernce to an atom (via the atom &apos;id&apos; attribute)</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>units</td><td>units for the parameter</td><td>character(len=*)</td><td>yes</td><td>&nbsp;</td></tr>
+<tr><td>fmt</td><td>format for reals</td><td>character(len=*)</td><td>yes</td><td>f8.3</td></tr>
+</table>
+  </LI>
+
+<OL>
+
+<h4><a name="style">CML output styles for coordinates</a></h4>
+<pre>
+x3      = 3D Cartesian coordinates long format
+xyz3    = 3D Cartesian coordinates short format
+xFrac   = 3D fractional coordinates long format
+xyzFrac = 3D fractional coordinates short format
+xy2     = 2d Cartesian coordinates long format
+</pre>
+</ol>
+</BODY>
+
+</HTML>

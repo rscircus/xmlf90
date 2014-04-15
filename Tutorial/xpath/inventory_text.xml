@@ -1,0 +1,17 @@
+<inventory>
+<item id="003">
+Some random text.
+<description>Washing machine</description>
+<price currency="euro">1500.00</price>
+</item>
+<item id="007">
+<description>Microwave oven</description>
+More text.
+<price currency="euro">300.00</price>
+</item>
+<item id="011">
+<description>Dishwasher</description>
+<price currency="swedish crown">10000.00</price>
+Still more text.
+</item>
+</inventory>

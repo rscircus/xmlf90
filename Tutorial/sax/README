@@ -1,0 +1,13 @@
+This directory contains the source for the SAX examples in the User Guide.
+
+
+Release Notes:
+
+Changes with respect to the text in the User Guide:
+
+* Obvious typos and missing declarations have been corrected. 
+
+* Subroutine begin_element_print in simple.f90 
+  cannot apparently be both an internal subprogram and an actual argument. 
+  It has been put in a module.
+

@@ -1,0 +1,74 @@
+<html>
+
+<head>
+  <style>
+        TABLE {align: center; }
+        H1    {color: #ffffff; background: Navy; font-weight: bold; font-family: Tahoma, Verdana; margin: 0px; padding: 2px; }
+        H2    {color: #ffffff; background: #4682B4; font-weight: bold; font-family: Tahoma, Verdana; }
+        H2.ag  {color: #ffffff; background: #468212; font-weight: bold; font-family: Tahoma, Verdana; }
+        TH    {color: #ffffff; background: #4682B4; font-weight: bold; font-family: Tahoma, Verdana; }
+	LI    {font-weight: bold; font-family: Tahoma, Verdana; }
+  </style>
+</head>
+
+<body>
+  <h1>Fortran XML Tools</h1>
+  
+  <h2>SAX</h2>
+  <p>Flib SAX is a SAX level 1.0 implementation in Fortran 90.</p>
+  <p>A PDF Tutorial and UserGuide is available <a
+  href="UserGuide.pdf">here</a>
+  </p>
+
+  <h2>Stream Xpath</h2>
+  <p>Stream Xpath is a library that emulates some of the features of
+     the Xpath standard, but working within the stream model of
+     SAX.</p>
+  <p>Its small memory footprint makes it quite useful to process large
+     datafiles, for which the standard Xpath (built on top of the
+     memory-intensive DOM) would not be appropriate. However, the
+     stream paradigm forces the user to be careful about controlling
+     the state of the parser.</p>
+  <p>A PDF Tutorial and UserGuide is available <a
+  href="UserGuide.pdf">here</a>
+  </p>
+
+  <h2>WXML</h2>
+  <p>WXML is a library that facilitates the writing of well-formed
+  XML, including such features as automatic start-tag completion,
+  attribute pretty-printing, and element indentation. There are also
+  helper routines to handle the output of numerical arrays.</p>
+
+  <p><a href="WXML.html">Desription of the routines</a></p>
+
+  <p>See also the examples in the <tt>Examples/wxml</tt>
+  subdirectory of the main distribution.</p>
+
+  <p>Jon Wakelin has written a CML-formatting library on top of
+  a slightly modified WXML. 
+  Documentation is available <a href="jumbo.html">here</a>.
+  For examples of CML-formatting in strict WXML, see the <tt>Examples/cml</tt>
+  subdirectory of the main xmlf90 distribution. The two strands of
+  WXML will be merged very soon.</p>
+   
+  <h2>FDOM</h2>
+  <p>FDOM is a a DOM level 1.0 implementation in Fortran 95.  
+  We have implemented almost all the instance methods, 
+  although it is unlikely that any of the class methods 
+  will ever be implemented.  
+  The FDOM is still evolving but is already in a usable state.
+  More importantly, as all of the interfaces are standard, 
+ changes to the code will only take place behind the scenes.</p>
+  
+  <p>A page containing a breakdown of the 
+   FDOM methods is available <a href="DOM.html">here</a></p>
+  See also the examples in the <tt>Examples/dom</tt>
+  subdirectory of the main distribution.</p>
+  
+  <br/>
+
+  <hr/>
+  <p align="right"><i>Jon Wakelin, Alberto Garcia, April 2004</i></p>
+</body>
+
+</html>

@@ -1,0 +1,1334 @@
+\documentclass[11pt]{article}
+%\decimalpoint
+\tolerance 10000
+\textheight 24cm
+\textwidth 16cm
+\oddsidemargin 1mm
+\topmargin -20mm
+\parindent 0mm
+\begin{document}\title{xmlf90: A parser for XML in Fortran90}
+\author{Alberto Garc\'{\i}a \\
+           Departamento de F\'{\i}sica de la Materia Condensada \\
+           Facultad de Ciencia y Tecnolog\'{\i}a \\
+           Universidad del Pa\'{\i}s Vasco\\
+           Apartado 644 , 48080 Bilbao, Spain\\
+           http://lcdx00.wm.lc.ehu.es/ag/xml/}
+\date{30 January 2004 --- xmlf90 Version 1.1}
+
+\maketitle\section{Introduction}
+
+{\bf NOTE: This version of the User Guide and Tutorial does not
+cover either the WXML printing library or the new DOM API 
+conceived by Jon Wakelin. See the html reference material and the
+relevant example subdirectories.}
+\bigskip
+
+This tutorial documents the user interface of \texttt{xmlf90}, a
+native Fortran90 XML parser. The parser was designed to be a useful
+tool in the extraction and analysis of data in the context of
+scientific computing, and thus the priorities were efficiency and the
+ability to deal with very large XML files while maintaining a small
+memory footprint. There are two programming interfaces. The first is
+based on the very successful SAX (Simple API for XML) model: the
+parser calls routines provided by the user to handle certain events,
+such as the encounter of the beginning of an element, or the end of an
+element, or the reading of character data.  The other is based on the
+XPATH standard. Only a very limited set of the full XPATH
+specification is offered, but it is already quite useful.
+
+Some familiarity of XML is assumed. Apart from the examples discussed
+in this tutorial (chosen for their simplicity), the interested reader
+can refer to the \texttt{Examples/} directory in the \texttt{xmlf90}
+distribution.
+
+
+
+\section{The SAX interface}
+\subsection{A simple example}
+
+To illustrate the working of the SAX interface, consider the following
+XML snippet
+
+\begin{verbatim}
+	<item id="003">                                                
+	   <description>Washing machine</description>  
+	   <price currency="euro">1500.00</price>  
+	</item>                                                            
+\end{verbatim}
+%
+When the parser processes this snippet, it carries out the sequence of calls:
+
+\begin{enumerate}
+\item call to \texttt{begin\_element\_handler} with name="item" and 
+    attributes=(Dictionary with the pair (id,003))
+\item call to \texttt{begin\_element\_handler} with name="description" and an
+    empty attribute dictionary. 
+\item  call to \texttt{pcdata\_chunk\_handler} with pcdata="Washing machine"
+\item call to \texttt{end\_element\_handler} with name="description"
+\item call to \texttt{begin\_element\_handler} with name="price" and 
+    attributes=(Dictionary with the pair (currency,euro))
+\item  call to \texttt{pcdata\_chunk\_handler} with pcdata="1500.00"
+\item call to \texttt{end\_element\_handler} with name="price"
+\item call to \texttt{end\_element\_handler} with name="item"
+\end{enumerate}
+	
+The handler routines are written by the user and passed to the parser
+as procedure arguments. A simple program that parses the above XML
+fragment (assuming it resides in file \textsl{inventory.xml}) and
+prints out the names of the elements and any \textsl{id} attributes as
+they are found, is:
+
+\begin{verbatim}
+program simple
+use flib_sax
+
+type(xml_t)        :: fxml      ! XML file object (opaque)
+integer            :: iostat    ! Return code (0 if OK)
+
+call open_xmlfile("inventory.xml",fxml,iostat)
+if (iostat /= 0) stop "cannot open xml file"
+
+call xml_parse(fxml, begin_element_handler=begin_element_print)
+
+contains !---------------- handler subroutine follows
+
+subroutine begin_element_print(name,attributes)
+   character(len=*), intent(in)     :: name
+   type(dictionary_t), intent(in)   :: attributes
+   
+   character(len=3)  :: id
+   integer           :: status
+   
+   print *, "Start of element: ", name
+   if (has_key(attributes,"id")) then
+   	call get_value(attributes,"id",id,status)
+	print *, "  Id attribute: ", id
+   endif
+end subroutine begin_element_print
+
+end program simple
+\end{verbatim}
+%
+To access the XML parsing functionality, the user only needs to \texttt{use}
+the module \texttt{flib\_sax}, open the XML file, and call the main routine
+\texttt{xml\_parse}, providing it with the appropriate event handlers.
+
+The subroutine interfaces are:
+
+\begin{verbatim}
+subroutine open_xmlfile(fname,fxml,iostat)
+character(len=*), intent(in)  :: fname     ! File name
+type(xml_t), intent(out)      :: fxml      ! XML file object (opaque)
+integer, intent(out   )       :: iostat    ! Return code (0 if OK)
+
+
+subroutine xml_parse(fxml,                   &
+                     begin_element_handler,  &
+                     end_element_handler,    &
+                     pcdata_chunk_handler ....
+                     .... MORE OPTIONAL HANDLERS  )
+
+\end{verbatim}
+
+The handlers are OPTIONAL arguments (in the above example we just
+specify \texttt{begin\_element\_handler}). If no handlers are given,
+nothing useful will happen, except that any errors are detected and
+reported.  The interfaces for the most useful handlers are:
+
+\begin{verbatim}    
+   subroutine begin_element_handler(name,attributes)
+   character(len=*), intent(in)     :: name
+   type(dictionary_t), intent(in)   :: attributes
+   end subroutine begin_element_handler
+
+   subroutine end_element_handler(name)
+   character(len=*), intent(in)     :: name
+   end subroutine end_element_handler
+
+   subroutine pcdata_chunk_handler(chunk)
+   character(len=*), intent(in) :: chunk
+   end subroutine pcdata_chunk_handler
+\end{verbatim}
+
+The attribute information in an element tag is represented as a
+dictionary of name/value pairs, held in a \texttt{dictionary\_t}
+abstract type.  The information in it can be accessed through a set of
+dictionary methods such as \texttt{has\_key} and \texttt{get\_value}
+(full interfaces to be found in Sect.~\ref{sec:reference}).
+
+\subsection{Monitoring the sequence of events}
+The above example is too simple and not very useful if what we want is
+to extract information in a coherent manner. For example, assume we
+have a more complete inventory of appliances such as
+%
+\begin{verbatim}
+<inventory>
+	<item id="003">                                                
+	   <description>Washing machine</description>  
+	   <price currency="euro">1500.00</price>  
+	</item>                                                            
+	<item id="007">                                                
+	   <description>Microwave oven</description>  
+	   <price currency="euro">300.00</price>  
+	</item>                    
+	<item id="011">                                                
+	   <description>Dishwasher</description>  
+	   <price currency="swedish crown">10000.00</price>  
+	</item>    
+</inventory>                                                                        
+\end{verbatim}
+%
+and we want to print the items with their prices in the form:
+%
+\begin{verbatim}
+003 Washing machine : 1500.00 euro
+007 Microwave oven : 300.00 euro
+011 Dishwasher : 10000.00 swedish crown
+\end{verbatim}
+
+We begin by writing the following module
+
+\begin{verbatim}
+module m_handlers
+use flib_sax
+private
+public :: begin_element, end_element, pcdata_chunk
+!
+logical, private            :: in_item, in_description, in_price
+character(len=40), private  :: what, price, currency, id
+!
+contains !-----------------------------------------
+!
+subroutine begin_element(name,attributes)
+   character(len=*), intent(in)     :: name
+   type(dictionary_t), intent(in)   :: attributes
+   
+   integer  :: status
+   
+   select case(name)
+     case("item")
+       in_item = .true.
+       call get_value(attributes,"id",id,status)
+     
+     case("description")
+       in_description = .true.
+       
+     case("price")
+       in_price = .true.
+       call get_value(attributes,"currency",currency,status)
+
+   end select
+   
+end subroutine begin_element
+!---------------------------------------------------------------
+subroutine pcdata_chunk_handler(chunk)
+   character(len=*), intent(in) :: chunk
+
+   if (in_description) what = chunk
+   if (in_price) price = chunk
+
+end subroutine pcdata_chunk_handler
+!---------------------------------------------------------------
+subroutine end_element(name)
+   character(len=*), intent(in)     :: name
+   
+   select case(name)
+     case("item")
+       in_item = .false.
+       write(unit=*,fmt="(5(a,1x))") trim(id), trim(what), ":", &
+                                     trim(price), trim(currency)
+     
+     case("description")
+       in_description = .false.
+       
+     case("price")
+       in_price = .false.
+
+   end select
+   
+end subroutine end_element
+!---------------------------------------------------------------
+end module m_handlers
+\end{verbatim}
+%
+PCDATA chunks are passed back as simple fortran character variables,
+and we assign them to \texttt{what} or \texttt{price} depending on the
+context, which we monitor through the logical variables
+\texttt{in\_description, in\_price}, updated as we enter and leave
+different elements. (The variable \texttt{in\_item} is not strictly
+necessary.)
+
+The program to parse the file just needs to use the functionality in
+the module \texttt{m\_handlers}:
+%
+\begin{verbatim}
+program inventory
+use flib_sax
+use m_handlers
+
+type(xml_t)        :: fxml      ! XML file object (opaque)
+integer            :: iostat    
+
+call open_xmlfile("inventory.xml",fxml,iostat)
+if (iostat /= 0) stop "cannot open xml file"
+
+call xml_parse(fxml, begin_element_handler=begin_element, &
+                     end_element_handler=end_element,     &
+                     pcdata_chunk_handler=pcdata_chunk )
+                     
+end program inventory
+
+\end{verbatim}
+%
+\subsubsection{Exercises}
+\begin{enumerate}
+\item Code the above fortran files and the XML file in your
+computer. Compile and run the program and check that the output is
+correct. (Compilation instructions are provided in
+Sect.~\ref{sec:compiling}).
+\item Edit the XML file and remove one of the \texttt{</item>}
+lines. What happens? This is an example of a \textsl{mal-formed} XML
+file. The parser can detect it and complain about it.
+\item Edit the XML file and remove the \texttt{currency} attribute
+from one of the elements. What happens? In this case, the parser
+cannot detect the missing attribute (it is not a \textsl{validating
+parser}). However, it could be possible for the user to detect early
+that something is wrong by checking the value of the \texttt{status}
+variable after the call to \texttt{get\_value}.
+\item Modify the program to print the prices in euros (1 euro buys
+approximately 9.2 swedish crowns).
+\end{enumerate}
+
+\subsection{Other tags and their handlers}
+
+The parser can also process comments, XML declarations (formally known
+as ``processing instructions"), and SGML declarations, although the
+latter two are not acted upon in any way (in particular, no attempt at
+validation of the XML document is done).
+
+\begin{itemize}
+
+\item
+An \textbf{empty element} tag of the form
+%
+\begin{verbatim}
+	<name att="value"...  />
+\end{verbatim}
+%
+can be handled as successive calls to \texttt{begin\_element\_handler}
+and \texttt{end\_element\_handler}.  However, if the optional handler
+\texttt{empty\_element\_handler} is present, it is called instead. Its
+interface is exactly the same as that of
+\texttt{begin\_element\_handler}:
+%
+\begin{verbatim}
+   subroutine empty_element_handler(name,attributes)
+   character(len=*), intent(in)     :: name
+   type(dictionary_t), intent(in)   :: attributes
+   end subroutine empty_element_handler
+\end{verbatim}
+%
+\item
+\textbf{Comments} are sections of the XML file contained between the markup
+\texttt{<!{-}-} and \texttt{{-}->}, 
+and are handled by the optional argument \texttt{comment\_handler}
+%
+\begin{verbatim}
+   subroutine comment_handler(comment)
+   character(len=*), intent(in) :: comment
+   end subroutine comment_handler
+\end{verbatim}
+%
+\item
+\textbf{XML declarations} can be processed
+in the same way as elements, with the ``target" being the element name, etc. 
+For example, in
+%
+\begin{verbatim}
+	<?xml version="1.0"?>
+\end{verbatim}
+%
+\textsl{xml} would be the ``element name", \textsl{version} an
+attribute name, and \textsl{1.0} its value. The optional handler
+interface is:
+%
+\begin{verbatim}
+   subroutine xml_declaration_handler(name,attributes)
+   character(len=*), intent(in)     :: name
+   type(dictionary_t), intent(in)   :: attributes
+   end subroutine xml_declaration_handler
+\end{verbatim}
+%
+\item
+\textbf{SGML declarations} such as entity declarations or doctype
+specifications are treated basically as comments. Interface:
+%
+\begin{verbatim}
+   subroutine sgml_declaration_handler(sgml_declaration)
+   character(len=*), intent(in) :: sgml_declaration
+   end subroutine sgml_declaration_handler
+\end{verbatim}
+%
+\end{itemize}
+In the current version of the parser, overly long comments and SGML
+declarations might be truncated.
+
+
+\section{The XPATH interface}
+
+\textsl{NOTE: The current implementation gets its inspiration from
+XPATH, but by no means it is a complete, or even a subset,
+implementation of the standard. Since it is built on top of the SAX
+interface, it uses a ``stream" paradigm which is completely alien to
+the XPATH specification. It is nevertheless still quite useful. The
+author is open to suggestions to refine the interface.}
+
+\bigskip
+
+This API is based on the concept of an XML path. For example:
+%
+\begin{verbatim}
+/inventory/item
+\end{verbatim}
+%
+represents a 'item' element which is a child of the root element
+'inventory'. Paths can contain special wildcard markers such as
+\texttt{//} and \texttt{*}. The following are examples of valid paths:
+%
+\begin{verbatim}
+  //a       : Any occurrence of element 'a', at any depth.
+  /a/*/b    : Any 'b' which is a grand-child of 'a'
+  ./a       : A relative path (with respect to the current path)
+  a         : (same as above)
+  /a/b/./c  : Same as /a/b/c (the dot (.) is a dummy)
+  //*       : Any element.
+  //a/*//b  : Any 'b' under any children of 'a'.
+
+\end{verbatim}
+%
+\subsection{Simple example}
+Using the XPATH interface it is possible to search for any element
+directly, and to recover its attributes or character content. For
+example, to print the names of all the appliances in the inventory:
+%
+\begin{verbatim}
+program simple
+use flib_xpath
+
+type(xml_t) :: fxml
+
+integer  :: status
+character(len=100)  :: what
+
+call open_xmlfile("inventory.xml",fxml,status)
+!
+do
+      call get_node(fxml,path="//description",pcdata=what,status=status)
+      if (status < 0)   exit
+      print *, "Appliance: ", trim(what)
+enddo
+end program simple
+\end{verbatim}
+%
+Repeated calls to \texttt{get\_node} return the character content of
+the 'description' elements (at any depth). We exit the loop when the
+\texttt{status} variable is negative on return from the call. This
+indicates that there are no more elements matching the
+\texttt{//description} path pattern.\footnote{Returning a negative
+value for an end-of-file or end-or-record condition follows the
+standard practice. Positive return values signal malfunctions}
+
+Apart from path patterns, we can narrow our search by specifying
+conditions on the attribute list of the element. For example, to print
+only the prices which are given in euros we can use the
+\texttt{att\_name} and \texttt{att\_value} optional arguments:
+%
+\begin{verbatim}
+program euros
+use flib_xpath
+
+type(xml_t) :: fxml
+
+integer  :: status
+character(len=100)  :: price
+
+call open_xmlfile("inventory.xml",fxml,status)
+!
+do
+  call get_node(fxml,path="//price", &
+                att_name="currency",att_value="euro", &
+                pcdata=price,status=status)
+  if (status < 0)   exit
+  print *, "Price (euro): ", trim(price)
+enddo
+end program euros
+\end{verbatim}
+%
+We can zero in on any element in this fashion, but we apparently give
+up the all-important context. What happens if we want to print
+\textsl{both} the appliance description and its price?
+%
+\begin{verbatim}
+program twoelements
+use flib_xpath
+
+type(xml_t) :: fxml
+
+integer  :: status
+character(len=100)  :: what, price, currency
+
+call open_xmlfile("inventory.xml",fxml,status)
+!
+do
+  call get_node(fxml,path="//description", &
+                pcdata=what,status=status)
+  if (status < 0)   exit                   ! No more items
+  !
+  ! Price comes right after description...
+  !
+  call get_node(fxml,path="//price", &
+                attributes=attributes,pcdata=price,status=status)
+  if (status /= 0) stop "missing price element!"
+  
+  call get_value(attributes,"currency",currency,status)
+  if (status /= 0) stop "missing currency attribute!"
+  
+  write(unit=*,fmt="(6a)") "Appliance: ", trim(what), &
+                            ". Price: ", trim(price), " ", trim(currency)
+enddo
+end program twoelements
+\end{verbatim}
+%
+\subsubsection{Exercises}
+\begin{enumerate}
+\item Modify the above programs to print only the appliances priced in
+euros.
+\item Modify the order of the 'description' and 'price' elements in a
+item. What happens to the 'twoelements' program output?
+\item The full XPATH specification allows the query for a particular
+element among a set of elements with the same path, based on the
+ordering of the element. For example, "/inventory/item[2]" will refer
+to the second 'item' element in the XML file. Write a routine that
+implements this feature and returns the element's attribute
+dictionary.
+\item Queries for paths can be issued in any order, and so some
+mechanism for "rewinding" the XML file is necessary. It is provided by
+the appropriately named \texttt{rewind\_xmlfile} subroutine (see full
+interface in the Reference section). Use it to implement a silly
+program that prints items from the inventory at random. (Extra points
+for including logic to minimize the number of rewinds.)
+\end{enumerate}
+%
+
+\subsection{Contexts and restricted searches}
+
+The logic of the \texttt{twoelements} program in the previous section
+ follows from the assumption that the 'price' element follows the
+ 'description' element in a typical 'item'. If the DTD says so, and
+ the XML file is valid (in the technical sense of conforming to the
+ DTD), the assumption should be correct. However, since the parser is
+ non-validating, it might be unreasonable to expect the proper
+ ordering in all cases. What we should expect (as a minimum) is that
+ both the price and description elements are children of the 'item'
+ element. In the following version we make use of the \textbf{context}
+ concept to achieve a more robust solution.
+%
+\begin{verbatim}
+program item_context
+use flib_xpath
+
+type(xml_t) :: fxml, contex
+
+integer  :: status
+character(len=100)  :: what, price, currency
+
+call open_xmlfile("inventory.xml",fxml,status)
+!
+do
+  call mark_node(fxml,path="//item",status=status)
+  if (status < 0)   exit      ! No more items
+  context = fxml               ! Save item context   
+  !
+  ! Search relative to context
+  !
+  call get_node(fxml,path="price", &
+                attributes=attributes,pcdata=price,status=status)
+  call get_value(attributes,"currency",currency,status)
+  if (status /= 0) stop "missing currency attribute!"
+  !
+  ! Rewind to beginning of context
+  !
+  fxml = context
+  call sync_xmlfile(fxml)  
+  !
+  ! Search relative to context
+  !
+  call get_node(fxml,path="description",pcdata=what,status=status)
+  write(unit=*,fmt="(6a)") "Appliance: ", trim(what), &
+                            ". Price: ", trim(price), " ", trim(currency)
+enddo
+end program item_context
+\end{verbatim}
+%
+The call to \texttt{mark\_node} positions the parser's file handle
+\texttt{fxml} right after the end of the starting tag of the next
+'item' element. We save that position as a ``context marker" to which
+we can return later on. The calls to \texttt{get\_node} use path
+patterns that do not start with a \texttt{/}: they are
+\textbf{searches relative to the current context}. After getting the
+information about the 'price' element, we restore the parser's file
+handle to the appropriate position at the beginning of the 'item'
+context, and search for the 'description' element. In the following
+iteration of the loop, the parser will find the next 'item' element,
+and the process will be repeated until there are no more 'item's.
+
+
+Contexts come in handy to encapsulate parsing tasks in re-usable
+subroutines. Suppose you are going to find the basic 'item' element
+content in a whole lot of different XML files. The following
+subroutine extracts the description and price information:
+%
+\begin{verbatim}
+subroutine get_item_info(context,what,price,currency)
+type(xml_t), intent(in)       :: contex
+character(len=*), intent(out) :: what, price, currency
+
+!
+! Local variables
+!
+type(xml_t)        :: ff
+integer            :: status
+type(dictionary_t) :: attributes
+
+  ! 
+  ! context is read-only, so make a copy and sync just in case
+  !
+  ff = context
+  call sync_xmlfile(ff)  
+  !
+  call get_node(ff,path="price", &
+                attributes=attributes,pcdata=price,status=status)
+  call get_value(attributes,"currency",currency,status)
+  if (status /= 0) stop "missing currency attribute!"
+  !
+  ! Rewind to beginning of context
+  !
+  ff = context
+  call sync_xmlfile(ff)  
+  !
+  call get_node(ff,path="description",pcdata=what,status=status)
+
+end subroutine get_item_info
+\end{verbatim}
+%
+Using this routine, the parsing is much more compact:
+%
+\begin{verbatim}
+program item_context
+use flib_xpath
+
+type(xml_t) :: fxml
+
+integer  :: status
+character(len=100)  :: what, price, currency
+
+call open_xmlfile("inventory.xml",fxml,status)
+!
+do
+  call mark_node(fxml,path="//item",status=status)
+  if (status /= 0)   exit      ! No more items
+  call get_item_info(fxml,what,price,currency)
+  write(unit=*,fmt="(6a)") "Appliance: ", trim(what), &
+                            ". Price: ", trim(price), " ", trim(currency)
+  call sync_xmlfile(fxml)
+enddo
+end program item_context
+\end{verbatim}
+%
+It is extremely important to understand the meaning of the call to
+\texttt{sync\_xmlfile}. The file handle \texttt{fxml} holds parsing
+context \textbf{and} a physical pointer to the file position
+(basically a variable counting the number of characters read so
+far). When the context is passed to the subroutine and the parsing
+carried out, the context and the file position get out of
+sync. Synchronization means to re-position the physical file pointer
+to the place where it was when the context was first created.
+
+
+\subsubsection{Exercises}
+\begin{enumerate}
+\item Modify the above programs to print only the appliances priced in
+euros.
+\item Write a program that prints only the most expensive
+item. (Assume that the inventory is very large and it is not feasible
+to hold everything in memory...)
+\item Use the \texttt{get\_item\_info} subroutine to print
+descriptions and price information from the following XML file:
+%
+\begin{verbatim}
+<vacations>
+	<trip>                                                
+	   <description>Mediterranean cruise</description>  
+	   <price currency="euro">1500.00</price>  
+	</trip>                                                            
+	<trip>                                                
+	   <description>Week in Majorca</description>  
+	   <price currency="euro">300.00</price>  
+	</trip>                    
+	<trip>                                                
+	   <description>Wilderness Route</description>  
+	   <price currency="swedish crown">10000.00</price>  
+	</trip>    
+</vacations>                                          
+\end{verbatim}
+%
+(Note that the routine does not care what the context name is (it
+could be 'item' or 'trip'). It is only the fact that the children
+('description' and 'price') are the same that matters.
+\end{enumerate}
+
+\section{Handling of scientific data}
+
+\subsection{Numerical datasets}
+
+While the ASCII form is not the most efficient for the storage of
+numerical data, the portability and flexibility offered by the XML
+format makes it attractive for the interchange of scientific
+datasets. There are a number of efforts under way to standardize this
+area, and presumably we will have nifty tools for the creation and
+visualization of files in the near future. Even then, however, it will
+be necessary to be able to read numerical information into fortran
+programs. The \texttt{xmlf90} package offers limited but useful
+functionality in this regard, making it possible to build numerical
+arrays on the fly as the XML file containing the data is parsed. As an
+example, consider the dataset:
+%
+\begin{verbatim}
+<data>
+ 8.90679398599 8.90729421510 8.90780189594 8.90831710494
+ 8.90883991832 8.90937041202 8.90990866166 8.91045474255
+ 8.91100872963 8.91157069732 8.91214071958 8.91271886986
+ 8.91330522098 8.91389984506 8.91450281355 8.91511419713
+ 8.91573406560 8.91636248785 8.91699953183 8.91764526444
+ 8.91829975142 8.91896305734 8.91963524555 8.92031637799
+ 8.92100651514 8.92170571605 8.92241403816 8.92313153711
+ 8.92385826683 8.92459427943 8.92533962491 8.92609435120
+ 8.92685850416 8.92763212726 8.92841526149 8.92920794545
+</data>
+\end{verbatim}
+%
+and the following fragment of a \texttt{m\_handlers} module for SAX parsing:
+%
+\begin{verbatim}
+
+real, dimension(1000)  :: x    ! numerical array to hold data
+
+subroutine begin_element(name,attributes)
+ ...
+   select case(name)
+     case("data")
+       in_data = .true.
+       ndata = 0     
+     ...
+   end select
+   
+end subroutine begin_element
+!---------------------------------------------------------------
+subroutine pcdata_chunk_handler(chunk)
+   character(len=*), intent(in) :: chunk
+
+   if (in_data) call build_data_array(chunk,x,ndata)
+   ...
+
+end subroutine pcdata_chunk_handler
+!-------------------------------------------------------------
+subroutine end_element(name)
+ ...
+   select case(name)
+     case("data")
+       in_data = .false.
+       print *, "Read ", ndata, " data elements."
+       print *, "X: ", x(1:ndata)
+     ...
+   end select
+   
+end subroutine end_element
+\end{verbatim}
+%
+When the \texttt{<data>} tag is encountered by the parser, the
+variable \texttt{ndata} is initialized. Any PCDATA chunks found from
+then on and until the \texttt{</data>} tag is seen are passed to the
+\texttt{build\_data\_array} generic subroutine, which converts the
+character data to the numerical format (integer, default real, double
+precision) implied by the array \texttt{x}. The array is filled with
+data and the \texttt{ndata} variable increased accordingly.
+
+If the data is known to represent a multi-dimensional array (something
+that could be encoded in the XML as attributes to the 'data' element,
+for example), the user can employ the fortran \texttt{reshape}
+intrinsic to obtain the final form.
+
+There is absolutely no limit to the size of the data (apart from
+filesystem size and total memory constraints) since the parser only
+holds in memory at any given time a small chunk of character data (the
+default is to split the character data stream and call the
+\texttt{pcdata\_chunk\_handler} routine at the end of a line, or at
+the end of a token if the line is too long). This is one of the most
+useful features of the SAX approach to XML parsing.
+
+In order to read numerical data with the XPATH interface in its
+current implementation, one must first read the PCDATA into the
+\texttt{pcdata} optional argument of \texttt{get\_node}, and then call
+\texttt{build\_data\_array}. However, there is an internal limit to
+the size of the PCDATA buffer, so this method cannot be safely used
+for large datasets at this point. In a forthcoming version there will
+be a generic subroutine \texttt{get\_node} with a \texttt{data}
+numerical array optional argument which will be filled by the parser
+on the fly.
+
+
+
+
+\subsubsection{Exercises}
+\begin{enumerate}
+\item Generate an XML file containing a large dataset, and write a
+program to read the information back. You might want to include
+somewhere in the XML file information about the number of data
+elements, so that an array of the proper size can be used.
+\item Devise a strategy to read a dataset without knowing in advance
+the number of data elements. (Some possibilities: re-sizable
+allocatable arrays, two-pass parsing...).
+\item Suggest a possible encoding for the storage of two-dimensional
+arrays, and write a program to read the information from the XML file
+and create the appropriate array.
+\item Write a program that could read a 10Gb Monte Carlo simulation
+dataset and print the average and standard deviation of the data. (We
+are not advocating the use of XML for such large datasets. NetCDF
+would be much more efficient in this case).
+\end{enumerate}
+
+\subsection{Mapping of XML elements to derived types}
+
+After the parsing, the data has to be put somewhere. A good strategy
+to handle structured content is to try to replicate it within data
+structures inside the user program. For example, an element of the
+form
+%
+\begin{verbatim}
+<table units="nm" npts="100">
+<description>Cluster diameters</description>
+<data>
+2.3 4.5 5.6 3.4 2.3 1.2 ...
+...
+...
+</data>
+</table>
+\end{verbatim}
+%
+could be mapped onto a derived type of the form:
+%
+\begin{verbatim}
+type :: table
+  character(len=50)            :: description
+  character(len=20)            :: units
+  integer                      :: npts
+  real, dimension(:), pointer  :: data
+end type table
+\end{verbatim}
+%
+There could even be parsing and output subroutines associated to this
+derived type, so that the user can handle the XML production and
+reading transparently. Directory \texttt{Examples/} in the
+\texttt{xmlf90} distribution contains some code along these lines.
+
+\subsubsection{Exercises}
+%
+\begin{enumerate}
+\item Study the \texttt{pseudo} example in \texttt{Examples/sax/} and
+\texttt{Examples/xpath/}. Now, with your own application in mind,
+write derived-type definitions and parsing routines to handle your XML
+data (which would also need to be \textsl{designed} somehow).
+
+\end{enumerate}
+%
+
+
+\section{REFERENCE: Subroutine interfaces}
+\label{sec:reference}
+
+\subsection{Dictionary handling}
+
+Attribute lists are handled as instances of a derived type
+\texttt{dictionary\_t}, loosely inspired by the Python type.  The
+terminology is more general: keys and entries instead of names and
+attributes.
+
+\begin{itemize}
+\item
+%
+\begin{verbatim}
+function number_of_entries(dict) result(n)
+!
+! Returns the number of entries in the dictionary
+!
+type(dictionary_t), intent(in)   :: dict
+integer                          :: n
+\end{verbatim}
+%
+\item
+%
+\begin{verbatim}
+function has_key(dict,key) result(found)
+!
+! Checks whether there is an entry with
+! the given key in the dictionary
+!
+type(dictionary_t), intent(in)   :: dict
+character(len=*), intent(in)     :: key
+logical                          :: found
+\end{verbatim}
+\item
+%
+\begin{verbatim}
+subroutine get_value(dict,key,value,status)
+!
+! Gets values by key
+!
+type(dictionary_t), intent(in)            :: dict
+character(len=*), intent(in)              :: key
+character(len=*), intent(out)             :: value
+integer, intent(out)                      :: status
+\end{verbatim}
+%
+\item
+%
+\begin{verbatim}
+subroutine get_key(dict,i,key,status)
+!
+! Gets keys by their order in the dictionary
+!
+type(dictionary_t), intent(in)            :: dict
+integer, intent(in)                       :: i
+character(len=*), intent(out)             :: key
+integer, intent(out)                      :: status
+
+\end{verbatim}
+%
+\item
+%
+\begin{verbatim}
+subroutine print_dict(dict)
+!
+! Prints the contents of the dictionary to stdout
+!
+type(dictionary_t), intent(in)   :: dict
+\end{verbatim}
+\end{itemize}
+
+\subsection{SAX interface}
+
+\begin{itemize}
+\item
+\begin{verbatim}
+subroutine open_xmlfile(fname,fxml,iostat)
+!
+! Opens the file "fname" and creates an xml handle fxml
+! iostat /= 0 on error.
+!
+character(len=*), intent(in)      :: fname
+integer, intent(out)              :: iostat
+type(xml_t), intent(out)          :: fxml
+\end{verbatim}
+\item
+\begin{verbatim}
+subroutine xml_parse(fxml, begin_element_handler,    &
+                           end_element_handler,      &
+                           pcdata_chunk_handler,     &
+                           comment_handler,          &
+                           xml_declaration_handler,  &
+                           sgml_declaration_handler, &
+                           error_handler,            &
+                           signal_handler,           &
+                           verbose,                  &
+                           empty_element_handler)
+
+type(xml_t), intent(inout), target  :: fxml
+
+optional                            :: begin_element_handler
+optional                            :: end_element_handler
+optional                            :: pcdata_chunk_handler
+optional                            :: comment_handler
+optional                            :: xml_declaration_handler
+optional                            :: sgml_declaration_handler
+optional                            :: error_handler
+optional                            :: signal_handler  ! see XPATH code
+logical, intent(in), optional       :: verbose
+optional                            :: empty_element_handler
+
+\end{verbatim}
+\item Interfaces for handlers follow:
+
+\begin{verbatim}
+   subroutine begin_element_handler(name,attributes)
+   character(len=*), intent(in)     :: name
+   type(dictionary_t), intent(in)   :: attributes
+   end subroutine begin_element_handler
+
+   subroutine end_element_handler(name)
+   character(len=*), intent(in)     :: name
+   end subroutine end_element_handler
+
+   subroutine pcdata_chunk_handler(chunk)
+   character(len=*), intent(in) :: chunk
+   end subroutine pcdata_chunk_handler
+
+   subroutine comment_handler(comment)
+   character(len=*), intent(in) :: comment
+   end subroutine comment_handler
+
+   subroutine xml_declaration_handler(name,attributes)
+   character(len=*), intent(in)     :: name
+   type(dictionary_t), intent(in)   :: attributes
+   end subroutine xml_declaration_handler
+
+   subroutine sgml_declaration_handler(sgml_declaration)
+   character(len=*), intent(in) :: sgml_declaration
+   end subroutine sgml_declaration_handler
+
+   subroutine error_handler(error_info)
+   type(xml_error_t), intent(in)            :: error_info
+   end subroutine error_handler
+
+   subroutine signal_handler(code)
+   logical, intent(out) :: code
+   end subroutine signal_handler
+
+   subroutine empty_element_handler(name,attributes)
+   character(len=*), intent(in)     :: name
+   type(dictionary_t), intent(in)   :: attributes
+   end subroutine empty_element_handler
+\end{verbatim}
+\end{itemize}
+
+Other file handling routines (some of them really only useful within
+the XPATH interface):
+
+\begin{itemize}
+\item
+\begin{verbatim}
+subroutine REWIND_XMLFILE(fxml)
+!
+! Rewinds the physical file associated to fxml and clears the data
+! structures used in parsing.
+!
+type(xml_t), intent(inout) :: fxml
+\end{verbatim}
+
+\item
+\begin{verbatim}
+subroutine SYNC_XMLFILE(fxml,status)
+!
+! Synchronizes the physical file associated to fxml so that reading
+! can resume at the exact point in the parsing saved in fxml.
+!
+type(xml_t), intent(inout) :: fxml
+integer, intent(out)       :: status
+
+\end{verbatim}
+\item
+\begin{verbatim}
+subroutine CLOSE_XMLFILE(fxml)
+!
+! Closes the file handle fmxl (and the associated OS file object)
+!
+type(xml_t), intent(inout) :: fxml
+\end{verbatim}
+\end{itemize}
+
+\subsection{XPATH interface}
+%
+\begin{itemize}
+\item
+\begin{verbatim}
+subroutine MARK_NODE(fxml,path,att_name,att_value,attributes,status)
+!
+! Performs a search of a given element (by path, and/or presence of
+! a given attribute and/or value of that attribute), returning optionally
+! the element's attribute dictionary, and leaving the file handle fxml
+! ready to process the rest of the element's contents (child elements
+! and/or pcdata).
+!
+! Side effects: it sets a "path_mark" in fxml to enable its use as a 
+! context.
+!
+! If the argument "path" is present and evaluates to a relative path (a
+! string not beginning with "/"), the search is interrupted after the end
+! of the "ancestor_element" set by a previous call to "mark_node".
+! If not earlier, the search ends at the end of the file.
+!
+! The status argument, if present, will hold a return value,
+! which will be:
+!
+!   0 on success,
+!   negative in case of end-of-file or end-of-ancestor-element, or
+!   positive in case of other malfunction
+!
+type(xml_t), intent(inout), target           :: fxml
+character(len=*), intent(in), optional       :: path
+character(len=*), intent(in), optional       :: att_name
+character(len=*), intent(in), optional       :: att_value
+type(dictionary_t), intent(out), optional    :: attributes
+integer, intent(out), optional               :: status
+\end{verbatim}
+
+\item
+\begin{verbatim}
+subroutine GET_NODE(fxml,path,att_name,att_value,attributes,pcdata,status)
+!
+! Performs a search of a given element (by path, and/or presence of
+! a given attribute and/or value of that attribute), returning optionally
+! the element's attribute dictionary and any PCDATA characters contained
+! in the element's scope (but not child elements). It leaves the file handle
+! physically and logically positioned:
+!
+!     after the end of the element's start tag if 'pcdata' is not present
+!     after the end of the element's end tag if 'pcdata' is present
+!
+! If the argument "path" is present and evaluates to a relative path (a
+! string not beginning with "/"), the search is interrupted after the end
+! of the "ancestor_element" set by a previous call to "mark_node".
+! If not earlier, the search ends at the end of the file.
+!
+! The status argument, if present, will hold a return value,
+! which will be:
+!
+!   0 on success,
+!   negative in case of end-of-file or end-of-ancestor-element, or
+!   positive in case of a malfunction (such as the overflow of the
+!   user's pcdata buffer).
+!
+type(xml_t), intent(inout), target           :: fxml
+character(len=*), intent(in), optional       :: path
+character(len=*), intent(in), optional       :: att_name
+character(len=*), intent(in), optional       :: att_value
+type(dictionary_t), intent(out), optional    :: attributes
+character(len=*), intent(out), optional      :: pcdata
+integer, intent(out), optional               :: status
+\end{verbatim}
+\end{itemize}
+%
+\subsection{PCDATA conversion routines}
+\begin{itemize}
+\item
+
+\begin{verbatim}
+subroutine build_data_array(str,x,n)
+!
+! Incrementally builds the data array x from
+! character data contained in str. n holds
+! the number of entries of x set so far.
+!
+character(len=*), intent(in)                ::  str
+NUMERIC TYPE, dimension(:), intent(inout)   ::    x
+integer, intent(inout)                      ::    n
+!
+! NUMERIC TYPE can be any of:
+!            integer
+!            real
+!            real(kind=selected_real_kind(14))
+!
+\end{verbatim}
+\end{itemize}
+
+\subsection{Other utility routines}
+\begin{itemize}
+\item
+
+\begin{verbatim}
+function xml_char_count(fxml) result (nc)
+!
+! Provides the value of the processed-characters counter
+!
+type(xml_t), intent(in)          :: fxml
+integer                          :: nc
+
+nc = nchars_processed(fxml%fb)
+
+end function xml_char_count
+\end{verbatim}
+\end{itemize}
+
+\section{Other parser features, limitations, and design issues}
+
+\subsection{Features}
+\begin{itemize}
+\item 
+The parser can detect badly formed documents, giving by default an
+error report including the line and column where it happened. It also
+will accept an \texttt{error\_handler} routine as another optional
+argument, for finer control by the user. In the SAX interface, if the
+optional logical argument "verbose" is present and it is ".true.", the
+parser will offer detailed information about its inner workings. In
+the XPATH interface, there are a pair of routines,
+\texttt{enable\_debug} and \texttt{disable\_debug}, to control
+verbosity. See \texttt{Examples/xpath/} for examples.
+
+\item
+It ignores PCDATA outside of element context (and warns about it)
+
+\item
+Attribute values can be specified using both single and double
+quotes (as per the XML specs).
+
+\item 
+It processes the default entities: \&gt; \&amp; \&lt;  \&apos; and
+\&quot; and decimal and hex character entities (for example: \&\#123;
+\&\#4E;).  The processing is not
+"on the fly", but after reading chunks of PCDATA.
+
+\item
+Understands and processes CDATA sections (transparently passed as
+PCDATA to the handler).
+
+\end{itemize}
+
+See \texttt{Examples/sax/features} for an illustration of the above
+features.
+
+\subsection{Limitations}
+\begin{itemize}
+
+\item It is not a validating parser.
+
+\item It accepts only single-byte encodings for characters. 
+
+\item Currently, there are hard-wired limits on the length of element
+  and attribute identifiers, and the length of attribute values and
+  unbroken (i.e., without whitespace) PCDATA sections.  The limit is
+  set in \texttt{sax/m\_buffer.f90} to \texttt{MAX\_BUFF\_SIZE=300}.
+
+\item Overly long comments and SGML declarations can also be
+truncated, but the effect is currently harmless since the parser does
+not make use of that information. In a future version there could be a
+more robust retrieval mechanism.
+
+\item  The number of attributes is limited to \texttt{MAX\_ITEMS=20}
+  in \texttt{sax/m\_dictionary.f90}: 
+
+ 
+ \item In the XPATH interface, returned PCDATA character buffers
+ cannot be larger than an internal size of
+ \texttt{MAX\_PCDATA\_SIZE=65536} set in \texttt{xpath/m\_path.f90}
+
+
+\end{itemize}
+
+\subsection{Design Issues}
+
+See \texttt{\{sax,xpath\}/Developer.Guide}.
+
+The parser is actually written in the \texttt{F} subset of Fortran90,
+for which inexpensive compilers are available. (See
+\texttt{http://fortran.com/imagine1/}).
+ 
+There are two other projects aimed at parsing XML in Fortran: those of
+Mart Rentmeester (\texttt{http://nn-online.sci.kun.nl/fortran/}) and
+Arjen Markus (\texttt{http://xml-fortran.sourceforge.net/}). Up to
+this point the three projects have progressed independently, but it is
+anticipated that there will be a pooling of efforts in the near
+future. 
+
+\newpage
+\section{Installation Instructions}
+%
+There is extensible built-in support for arbitrary compilers.  The
+setup discussed below is taken from the author's \texttt{flib}
+project\footnote{There seems to be other projects with that very obvious
+name...}  The idea is to have a configurable repository of useful
+modules and library objects which can be accessed by fortran
+programs. Different compilers are supported by tailored macros.
+
+\texttt{xmlf90} is just one of several packages in \texttt{flib},
+hence the \texttt{flib\_} prefix in the package's visible module
+names.
+
+To install the package, follow this steps:
+
+\begin{verbatim}
+
+ * Create a directory somewhere containing a copy of the stuff in the
+   subdirectory 'macros':
+
+	cp -rp macros $HOME/flib
+
+ * Define the environment variable FLIB_ROOT to point to that directory.
+
+	FLIB_ROOT=$HOME/flib  ; export FLIB_ROOT     (sh-like shells)
+	setenv FLIB_ROOT $HOME/flib                  (csh-like shells)
+
+
+ * Go into $FLIB_ROOT, look through the fortran-XXXX.mk files,
+   and see if one of them applies to your computer/compiler combination. 
+   If so, copy it or make a (symbolic) link to 'fortran.mk':
+
+	ln -sf fortran-lf95.mk fortran.mk
+
+   If none of the .mk files look useful, write your own, using the
+   files provided as a guide. Basically you need to figure out the
+   name and options for the compiler,  the extension assigned to
+   module files, and the flag used to identify the module search path.
+
+ The above steps need only be done once.
+
+ * Go into subdirectory 'sax' and type 'make'.
+ * Go into subdirectory 'xpath' and type 'make'.
+ * Go into subdirectory 'Tutorial' and try the exercises in this guide
+  (see the next section for compilation details).
+ * Go into subdirectory 'Examples' and explore.
+
+\end{verbatim}
+%
+\section{Compiling user programs}
+\label{sec:compiling}
+
+After installation, the appropriate modules and library files should
+already be in \texttt{\$FLIB\_ROOT/modules} and
+\texttt{\$FLIB\_ROOT/lib}, respectively. To compile user programs, it
+is suggested that the user create a separate directory to hold the
+program files and prepare a \texttt{Makefile} following the template
+(taken from \texttt{Examples/sax/simple/}):
+
+\begin{verbatim}
+#---------------------------------------------------------------
+#
+default: example
+#
+#---------------------------
+MK=$(FLIB_ROOT)/fortran.mk
+include $(MK)
+#---------------------------
+#
+# Uncomment the following line for debugging support
+#
+FFLAGS=$(FFLAGS_DEBUG)
+#
+LIBS=$(LIB_PREFIX)$(LIB_STD) -lflib
+#
+OBJS= m_handlers.o example.o
+     
+example:  $(OBJS)
+        $(FC) $(LDFLAGS) -o $@ $(OBJS)  $(LIBS)
+#
+clean: 
+        rm -f *.o example *$(MOD_EXT)
+#
+#---------------------------------------------------------------
+\end{verbatim}
+%
+Here it is assumed that the user has two source files,
+\texttt{example.f90} and \texttt{m\_handlers.f90}. Simply typing
+\texttt{make} will compile \texttt{example}, pulling in all the needed
+modules and library objects.
+
+
+\end{document}

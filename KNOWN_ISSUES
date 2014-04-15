@@ -1,0 +1,23 @@
+KNOWN ISSUES as of version 1.1.
+
+** CHARACTER ENCODINGS
+
+Only single-byte encodings are supported at this time.
+
+** XPATH API.
+
+This API is not solid yet, particularly in the area of contexts handling.
+A new one is coming based on the DOM, but, not being stream-oriented, it
+will loose its small memory footprint and speed.
+
+** COMPILER SUPPORT.
+
+The parser will not work with the (very old) PGI compiler pgf90 Version 3.2
+due to a bug in their I/O. It runs well with Version 5.0.
+
+You need a F95 compiler to process the DOM subsystem.
+
+
+
+
+

@@ -1,0 +1,59 @@
+<html>
+<head>
+  <style>
+        TABLE {align: center; }
+        H1    {color: #ffffff; background: Navy; font-weight: bold; font-family: Tahoma, Verdana; margin: 0px; padding: 2px; }
+        H2    {color: #ffffff; background: #4682B4; font-weight: bold; font-family: Tahoma, Verdana; }
+        TH    {color: #ffffff; background: #4682B4; font-weight: bold; font-family: Tahoma, Verdana; }
+	LI    {font-weight: bold; font-family: Tahoma, Verdana; }
+  </style>
+</head>
+
+<body>
+ <H1>Jumbo90</H1>
+
+ <p>Jumbo90 is a library written in Fortran for creating CML
+ documents. Actually, Jumbo allows you to create XML, CML and STMML
+ (another markup language closely related to CML).  After a moments
+ thought you may ask why do we need a library to write things? I mean,
+ you can always type <pre>write(*,*)
+ "&lt;cml&gt;stuff&lt;/cml&gt;"</pre></p>
+ 
+ <p>Well, while in theory it is a fairly simply task to write CML, or
+ indeed any XML, in any language, in practice it's not quite that
+ easy.  Balancing tags that are opened at one end of a 2000 line
+ source file and closed at the other or even opened and closed in
+ different source files, is an unnecessary memory exercise, and
+ balancing them in the right order a pain. More importantly,
+ you'll probably only spot your mistake when you try to process the
+ file, and given that XML is case sensitive it's a pretty easy to make
+ a mistake.  Furthermore, CML elements will often be built up in a
+ standard manner using a large number of tags - and it can be fairly
+ tedious typing in all of these.  Add to this the fact that it is
+ extremely difficult to correctly indent an XML document whose
+ structure is as dynamic as that of the underlying program [1] (just
+ using write statements).  So, we decided that it was probably worth
+ our while to create a library for handling the more tedious or tricky
+ elements of creating a CML document.  We also added functionality to
+ check the well-formedness of all XML. In fact, most programming
+ languages provide utilties for performing these seemingly simple
+ tasks</p>
+ 
+<p>The original idea for Jumbo90 came from Peter Murray-Rust, who has
+a similar but much more rounded suite of tools written in Java, called
+Jumbo.  I then converted Peter's original F77 code into F90, but it
+suffered a little from its F77 inheritance, so now the base XML
+formatting layer of Jumbo is provided by Alberto Garcia's WXML
+library.</p>
+   
+<p>The Jumbo90 README containing a breakdown of all Jumbo90
+subroutines is available <a href="jumbodocs.html">here</a></p>
+
+<br/>
+<hr/>
+<p align="right"><i>Jon Wakelin, March 2004</i></p>
+<p> [1] It's only a cosmetic feature but it's very useful when you
+need someone to read the file, of course, there's nothing wrong with
+writing a 12M XML file in a single line.</p> </body>
+ 
+</html>

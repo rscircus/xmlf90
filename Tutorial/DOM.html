@@ -1,0 +1,158 @@
+<html>
+
+<head>
+  <style>
+        TABLE {align: center; }
+        H1    {color: #ffffff; background: Navy; font-weight: bold; font-family: Tahoma, Verdana; margin: 0px; padding: 2px; }
+        H2    {color: #ffffff; background: #4682B4; font-weight: bold; font-family: Tahoma, Verdana; }
+        TH    {color: #ffffff; background: #4682B4; font-weight: bold; font-family: Tahoma, Verdana; }
+	LI    { font-family: Tahoma, Verdana; }
+  </style>
+</head>
+
+<body>
+ <h1>FDOM</h1>
+ <p>The FDOM is a DOM level 1.0 implementation written in F95.  There are two &quot;gotchas&quot; 
+ that the Fortran programmer should be aware of, and I can't stress either strongly enough. 
+ Firstly the DOM, like many programming languages, starts counting from 0, and not 1, for this reason all do loops should run from 0 to length - 1.  
+ Secondly, we while we can not return an object in Fortran <i>per se</i>, 
+ we can return a pointer to an arbitrary structure containing mulitple members, including substructures (which is very much like returning an object).  
+ Therefore, you must use the pointer syntax:
+ <pre>
+program main
+
+ use flib_dom
+ 
+ type(fnode), pointer :: object
+ type(fnode), pointer :: myNode
+ 
+ object => getParentNode(myNode)
+ </pre>
+ <p>and not</p> 
+ <pre>
+program main
+
+ use flib_dom
+ 
+ type(fnode) :: object
+ type(fnode) :: myNode
+ 
+ object = getParentNode(myNode)
+ </pre>
+ 
+ <p>I can anticipate that these two issues (over running lists by
+ counting beyond the last item and trying to assign a pointer with =)
+ will be the cause of most programming errors using FDOM.  But fairly
+ soon you get used to it, if you already program in other languages,
+ or already use pointers in Fortran there shouldn't be any problem at
+ all.</p>
+
+<p>Here is a list of the the methods implemented:</p>
+
+
+ <br/>
+ 
+  <h2>(Generic) Node Interface</h2>
+  <ul>
+  <li>getNodeName(<i>node</i>)</li>
+  <li>getNodevalue</i>)</li>
+  <li>getNodeType(<i>node</i>)</li>
+  <li>hasChildNodes(<i>node</i>)</li>
+  <li>hasAttributes(<i>node</i>)</li>
+  <li>getParentNode(<i>node</i>)</li>
+  <li>getFirstChild(<i>node</i>)</li>
+  <li>getLastChild(<i>node</i>)</li>
+  <li>getNextSibling(<i>node</i>)</li>
+  <li>getPreviousSibling(<i>node</i>)</li>
+  <li>getOwnerDocument(<i>node</i>)</li>
+  <li>getAttributes(<i>node</i>)</li>
+  <li>getChildNodes(<i>node</i>)</li>
+  <li>setNodeValue(<i>node, value</i>)</li>
+  <li>appendChild(<i>node, newChild</i>)</li>
+  <li>removeChild(<i>node, oldChild</i>)</li>
+  <li>replaceChild(<i>node, newChild, oldChild</i>)</li>
+  <li>cloneNode(<i>node, [deep]</i>)</li>
+  <li>isSameNode(<i>node, node2</i>)</li>
+  <li>insertBefore(<i>node, newChild, refChild</i>)</li>
+  </ul>
+  <h2>element Node Interface</h2>
+  <ul>
+  <li>getTagName(<i>element</i>)</li>
+  <li>getElementsByTagName(<i>elment, tag</i>)</li>
+  <li>getAttribute(<i>element, name</i>)        </li>
+  <li>getAttributeNode(<i>element, name</i>)</li>
+  <li>setAttribute(<i>element, name, value</i>)</li>
+  <li>setAttributeNode(<i>element, newAttribute</i>)</li>
+  <li>removeAttribute(<i>element, name</i>)</li>
+ </ul>
+  <h2>document Node Interface</h2>
+  <ul>
+  <li>createTextNode(<i>text</i>)</li>
+  <li>createAttribute(<i>name</i>)</li>
+  <li>createElement(<i>name</i>)</li>
+  <li>createComment(<i>data</i>)</li>
+  <li>getElementsByTagName(<i>document, tag</i>)</li>
+ </ul>
+  <h2>attribute Node Interface</h2> 
+  <ul>
+  <li>getName(<i>attr</i>)</li>
+  <li>getValue(<i>attr</i>)</li>
+  <li>setValue(<i>attr, value</i>)</li>
+ </ul>
+  <h2>nodeList Interface</h2>
+  <ul>
+  <li>item(<i>nodeList, i</i>)</li>
+  <li>getLength(<i>nodeList</i>)</li>
+ </ul>
+  <h2>namedNodeMap Interface</h2>
+  <ul>
+  <li>item(<i>namedNodeMap, i</i>)</li>
+  <li>getLength(<i>namedNodeMap</i>)</li>
+  <li>getNamedItem(<i>namedNodeMap, name</i>)</li>
+  <li>setNamedItem(<i>namedNodeMap, name</i>)</li>
+  <li>removeNamedItem(<i>namedNodeMap, name</i>)</li>
+ </ul>
+
+  <br/>
+  <br/>
+  <br/>
+  A partial list of the interfaces of the methods implemented
+ follows. For a full listing, please see the code in subdirectory
+ <tt>dom</tt> of the main distribution.
+  <br/>
+   <ul>
+    <LI>
+      <table border="1" width="90%">
+        <tr><th width="30%">method</th><th width="30%">arguments</th><th width="30%">returns</th><th width="10%">DOM Level</th></tr>
+        <tr><td>getNodeName(node)</td><td>type(fnode) :: node</td><td>string</td><td>1.0</td></tr>
+        <tr><td>getNodeValue(node)</td><td>type(fnode) :: node</td><td>string</td><td>1.0</td></tr>
+        <tr><td>getNodeType(node)</td><td>type(fnode) ::
+  node</td><td>(integer code)</td><td>1.0</td></tr>
+        <tr><td>getParentNode(node)</td><td>type(fnode) :: node</td><td>type(fnode)</td><td>1.0</td></tr>
+        <tr><td>getFirstChild(node)</td><td>type(fnode) :: node</td><td>type(fnode)</td><td>1.0</td></tr>
+        <tr><td>getLastChild(node)</td><td>type(fnode) :: node</td><td>type(fnode)</td><td>1.0</td></tr>
+        <tr><td>getPreviousSibling(node)</td><td>type(fnode) :: node</td><td>type(fnode)</td><td>1.0</td></tr>
+        <tr><td>getNextSibling(node)</td><td>type(fnode) :: node</td><td>type(fnode)</td><td>1.0</td></tr>
+        <tr><td>getOwnerDocument(node)</td><td>type(fnode) :: node</td><td>type(fnode)</td><td>1.0</td></tr>
+	<tr><td>getAttributes(node)</td><td>type(fnode) :: node</td><td>type(fnamedNodeMap)</td><td>1.0</td></tr>
+        <tr><td>getChildNodes(node)</td><td>type(fnode) :: node</td><td>type(fnodeList)</td><td>1.0</td></tr>
+        <tr><td>getOwnerDocument(node)</td><td>type(fnode) :: node</td><td>type(fnode)</td><td>1.0</td></tr>
+	
+	<tr><td>appendChild(node, newChild)</td><td>type(fnode) :: node<br/>type(fnode) :: newChild</td><td>type(fnode)</td><td>1.0</td></tr>
+	<tr><td>removeChild(node, oldChild)</td><td>type(fnode) :: node<br/>type(fnode) :: oldChild</td><td>type(fnode)</td><td>1.0</td></tr>
+	<tr><td>replaceChild(node, newChild, oldChild)</td><td>type(fnode) :: node<br/>type(fnode) :: newChild<br/>type(fnode) :: oldChild</td><td>type(fnode)</td><td>1.0</td></tr>
+        <tr><td>replaceChild(node, refChild, oldChild)</td><td>type(fnode) :: node<br/>type(fnode) :: refChild<br/>type(fnode) :: oldChild</td><td>type(fnode)</td><td>1.0</td></tr>
+        <tr><td>hasChildren(node)</td><td>type(fnode) :: node</td><td>logical</td><td>1.0</td></tr>
+        <tr><td>hasAttributes</td><td>type(fnode) :: node</td><td>logical</td><td>2.0</td></tr>
+        <tr><td>isSameNode(node, node2)</td><td>type(fnode) :: node<br>type(fnode) :: node2</br></td><td>logical</td><td>3.0</td></tr>
+      </table>
+    </LI>
+  </ul>
+  
+  <br/>
+  <br/>
+  
+  </ul>
+</body>
+
+</html>

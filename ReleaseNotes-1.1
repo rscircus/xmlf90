@@ -1,0 +1,19 @@
+Release Notes for Version 1.1
+30 January 2004
+
+1. Added support for character references of the form &#dd; and &#xhh;
+where dd is a decimal number and hh a hexadecimal number.
+
+2. Revamped the reader module to perform a cleaner processing of
+characters and line/column accounting, even with non-Unix end of
+lines.
+
+3. Added routine xml_char_count to request the value of the character
+counter.
+
+4. Initialize explicitly all components of derived-type variables at
+run time (Fortran90 does not allow to do this at compile time).
+
+5. Proper echo of the XML declarations when they
+contain [, ], <, and > characters.
+

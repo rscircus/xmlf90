@@ -1,4 +1,27 @@
-xmlf90
-======
+This project was mainly developed by
 
-xmlf90
+Alberto Garcia (SAX, XPATH, WXML, Overall design)
+Jon Wakelin, Alberto Garcia (DOM subsystem)
+Jon Wakelin, (CML writing subsystem)
+Mart Reentmeester (STRINGS).
+
+New stuff coming: Roland Siegbert (CMake migration).
+
+Probably it makes more sense to use the successor
+[FoX](http://www1.gly.bris.ac.uk/~walker/FoX/), maintained by Andrew Walker.
+However, I used this already and decided to enhance the running system. ;-)
+
+This is a beta version of xmlf90-1.2, which contains significant
+new features. Please see the file Tutorial/Guide.html and
+the ReleaseNotes-1.2 file.
+
+
+
+
+
+
+
+
+
+
+

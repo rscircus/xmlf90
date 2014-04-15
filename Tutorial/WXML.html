@@ -1,0 +1,114 @@
+<HTML>
+  <HEAD>
+    <STYLE>
+        TABLE {align: center; }
+        H1    {color: #ffffff; background: Navy; font-weight: bold; font-family: Tahoma, Verdana; margin: 0px; padding: 2px; }
+        H2    {color: #ffffff; background: #4682B4; font-weight: bold; font-family: Tahoma, Verdana; }
+        TH    {color: #ffffff; background: #4682B4; font-weight: bold; font-family: Tahoma, Verdana; }
+	LI    {font-weight: bold; font-family: Tahoma, Verdana; }
+    </STYLE>
+  </HEAD>
+  <BODY>
+
+<H1>WXML Library</H1>
+
+<h2><li>Routines</li></h2>
+<h3>General routines</h3> 
+<ol>
+<li><a href="#init">xml_OpenFile</a> - Mandatory Initialization routine </li>
+<li><a href="#close">xml_Close</a> - Mandatory finalization routine, closes channels, etc</li>
+<li><a href="#str">str</a> - utility to convert reals and integers to character strings</li>
+</ol>
+
+<h3>XML routines</h3>
+<ol>
+<li><a href="#start">xml_NewElement</a> - writes an xml start tag</li>
+<li><a href="#attr">xml_AddAttribute</a> - adds an attribute to a tag</li>
+<li><a href="#text">xml_AddPcdata</a> - adds text to an xml element</li>
+<li><a href="#array">xml_AddArray</a> - dumps the contents of an array
+as pcdata</li>
+<li><a href="#end">xml_EndElement</a> - writes an xml end tag</li>
+</ol>
+
+<h2><li>Subroutine Guide</li></h2>
+
+<!-- GENERAL ROUTINES -->
+<OL>
+  <LI>
+<h4><a name="init">xml_OpenFile(filename, ind, xf)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>filename</td><td>xml filename</td><td>character(len=*)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>ind</td><td>controls indentation of output</td><td>logical</td><td>yes</td><td>.true.</td></tr>
+<tr><td>xf</td><td>xml filename</td><td>type(xmlf_t)</td><td>no</td><td>&nbsp;</td></tr>
+</table></li>
+  </LI>
+  <LI>
+<h4><a name="close">xml_Close(filehandle)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>xf</td><td>xml filehandle</td><td>type(xmlf_t)</td><td>no</td><td>&nbsp;</td></tr>
+</table></li>
+  </LI>
+  <LI>
+
+<h4><a name="str">function str(value, format)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>value</td><td>value to convert to string</td><td>real*8,
+real*4, integer, logical</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>format</td><td>format for reals</td><td>character(len=*)</td><td>yes</td><td>g22.12</td></tr>
+</table>
+<hr/>
+  </LI>
+</OL>
+
+<!-- XML ROUTINES -->
+<OL>
+  <LI>
+<h4><a name="start">xml_NewElement(xf, name)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>xf</td><td>xml filehandle</td><td>type(xmlf_t)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>name</td><td>name of tag to add</td><td>character(len=*)</td><td>no</td><td>&nbsp;</td></tr>
+</table>
+  </LI>
+  <LI>
+<h4><a name="attr">xml_AddAttribute(xf, attname, value)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>xf</td><td>xml filehandle</td><td>type(xmlf_t)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>attname</td><td>attribute name</td><td>character(len=*)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>value</td><td>attribute value</td><td>character(len=*)
+(convert using str())</td><td>no</td><td>&nbsp;</td></tr>
+</table>
+  </LI>
+  <LI>
+<h4><a name="text">xml_AddPcdata(xf, pcdata)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>xf</td><td>xml filehandle</td><td>type(xmlf_t)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>pcdata</td><td>string to add</td><td>character(len=*) (convert numbers
+using str())</td><td>no</td><td>&nbsp;</td></tr>
+</table>
+  </LI>
+<LI>
+<h4><a name="array">xml_AddArray(xf, a, format)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>xf</td><td>xml filehandle</td><td>type(xmlf_t)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>a</td><td>array (:) </td><td>integer, real, double</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>format</td><td>format
+</td><td>character(len=*)</td><td>yes</td><td>6(i12) / 4(es20.12)</td></tr>
+</table>
+  </LI>
+  <LI>
+<h4><a name="end">xml_EndElement(xf, name)</a></h4>
+<table border="1" width="90%">
+<tr><th width="20%">argument</th><th width="30%">role</th><th width="30%">type</th><th width="10%">optional</th><th width="10%">default</th></tr>
+<tr><td>xf</td><td>xml filehandle</td><td>type(xmlf_t)</td><td>no</td><td>&nbsp;</td></tr>
+<tr><td>name</td><td>name of element to close</td><td>character(len=*)</td><td>no</td><td>&nbsp;</td></tr>
+</table>
+  </LI>
+</OL>
+<hr/>

@@ -1,0 +1,12 @@
+This directory contains the source for the XPATH examples in the User Guide.
+
+
+Release Notes:
+
+Changes with respect to the text in the User Guide:
+
+* Obvious typos and missing declarations have been corrected. 
+
+* Due to a bug in xmlf90 Version 0.9.8, it is necessary to add an "attributes"
+argument in the call to "get_node" in euros.f90.
+

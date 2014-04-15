@@ -1,0 +1,55 @@
+See the UserGuide for a tutorial and a reference to the 
+SAX and stream XPATH parser APIs.
+
+The sax and xpath directories contain the source for the exercises in
+the User Guide.
+
+The new DOM interface is documented in file DOM.html.
+The WXML  writing library and the "Jumbo90" (CML writer by Jon Wakelin)
+are documented in WXML.html 
+
+
+GETTING STARTED QUICKLY
+
+You should really read the User Guide, but if you insist, here is the
+*minimum* you can do to get the parser working:
+
+ * Define the environment variable FLIB_ROOT to point to the macros
+   directory in the xmlf90 distribution
+   (You could make it point anywhere, but this is the simplest setup,
+    as you have everything under the same tree)
+
+      FLIB_ROOT=/somewhere/xmlf90/macros ; export FLIB_ROOT (sh-like shells)
+      setenv FLIB_ROOT /somewhere/xmlf90/macros           (csh-like shells)
+
+ * Go into macros, look through the fortran-XXXX.mk files,
+   and see if one of them applies to your computer/compiler combination. 
+   If so, copy it or make a (symbolic) link to 'fortran.mk':
+
+	ln -sf fortran-lf95.mk fortran.mk
+
+   If none of the .mk files look useful, write your own, using the
+   files provided as a guide. Basically you need to figure out the
+   name and options for the compiler,  the extension assigned to
+   module files, and the flag used to identify the module search path.
+
+ The above steps need only be done once.
+
+  Go back to the top directory.
+
+  If you have a Fortran95 compiler, simply type "sh build.sh"
+  If not, edit build.sh and comment out the DOM sections as directed.
+
+ * Go into subdirectory 'Examples' and explore.
+
+ * Go into subdirectory 'Tutorial' and try the exercises in the User Guide
+  (see the next section for compilation details).
+
+** Compiling user programs
+
+After installation, the appropriate modules and library files should
+already be in $FLIB_ROOT/modules and
+$FLIB_ROOT/lib, respectively. To compile user programs, it
+is suggested that the user create a separate directory to hold the
+program files and prepare a Makefile following the templates in the
+Examples/ directory.

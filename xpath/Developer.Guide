@@ -1,0 +1,63 @@
+Developer Notes for the XPATH-lite API
+
+This API is built on top of the more fundamental SAX one. The basic
+idea is to have a set of programable handlers that communicate among
+themselves and with the parser via module variables.
+
+A new pseudo-handler, "signal_handler", has been added to the optional
+argument list of xml_parse(). In the current implementation it just
+checks whether a stop signal has been raised by the user side of the
+program (for example, after a "begin tag" event, or after going out
+of the scope of a parent element).
+
+Since the SAX parser is stream-oriented, and XPATH searches can be
+done in any order, there are new routines to rewind the XML file and
+to synchronize the physical file reader with a previously saved point
+in the XML tree. 
+
+These tools, and the rather sophisticated path-matching routine
+provided (which allows for wildcards and the "//" construction) would
+be enough for standard use, as implemented in the routine
+"get_node". However, there is also the possibility of performing
+searches constrained to a given ancestor element ("context" searches)
+so that blocks of logically related information can be processed
+together. A context is implicitly created by a call to
+"mark_node". Contexts can be saved and "synched" to, allowing for
+repeated constrained searches (calls with relative paths). Contexts
+can even be passed to subroutines to package the parsing of common
+elements once and for all. (See for example Examples/xpath/pseudo.f90).
+This feature is nevertheless in need of a more rigorous specification:
+
+* What should be the behavior if a "mark_node" is followed by a
+  call to "get_node" with an absolute path?
+* Should there always be an "automatic rewind" to the beginning of the
+  context before any successive calls to "get_node"?
+
+
+LIMITATIONS
+
+The pcdata buffer provided by the user as a character variable could
+overflow.  Note that the parser itself uses a string of length
+MAX_PCDATA_SIZE (currently 65536) as a buffer to hold PCDATA. A
+warning is issued if there is not enough space (in the user or in the
+system buffer) to hold the data.
+
+Support for converting PCDATA characters to numerical arrays "on the
+fly" is planned for a forthcoming version.
+
+
+The coding style is that of the F subset of Fortran90. I strongly
+believe that it makes for better coding and fewer errors.
+Go to http://www.fortran.com/imagine1/ and get a feel for it. You can
+download free implementations for Linux and Windows, or get an
+inexpensive CD+Book combination to help support the project. Of course,
+F *is* Fortran, so you can always compile it with a Fortran compiler.
+
+
+
+
+
+
+
+
+
