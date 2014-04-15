@@ -18,9 +18,14 @@ This is a beta version of xmlf90-1.2, which contains significant
 new features. Please see the file Tutorial/Guide.html and
 the ReleaseNotes-1.2 file.
 
+
 ### Link to old maintener
 * [Alberto Garcia](http://lcdx00.wm.lc.ehu.es/~wdpgaara/xml/index.html)
 
+
+### Credits:
+
+* http://www.cats.rwth-aachen.de
 
 
 
