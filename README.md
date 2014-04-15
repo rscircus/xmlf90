@@ -8,7 +8,7 @@ This project was mainly developed by
 * Mart Reentmeester (STRINGS).
 
 New stuff coming:
-* Roland Siegbert (CMake migration).
+* [Roland Siegbert](http://www.cats.rwth-aachen.de/Members/siegbert) (CMake migration).
 
 *Probably* it makes more sense to use the successor
 [FoX](http://www1.gly.bris.ac.uk/~walker/FoX/), maintained by Andrew Walker.
