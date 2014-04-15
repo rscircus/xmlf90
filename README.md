@@ -19,7 +19,7 @@ new features. Please see the file Tutorial/Guide.html and
 the ReleaseNotes-1.2 file.
 
 
-### Link to old maintener
+### Link to old maintainer
 * [Alberto Garcia](http://lcdx00.wm.lc.ehu.es/~wdpgaara/xml/index.html)
 
 
