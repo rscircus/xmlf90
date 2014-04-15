@@ -12,7 +12,7 @@ New stuff coming:
 
 *Probably* it makes more sense to use the successor
 [FoX](http://www1.gly.bris.ac.uk/~walker/FoX/), maintained by Andrew Walker.
-However, I used this already and decided to enhance the running system. ;-)
+However, I implemented this project already beforehand in my own projects and decided to enhance the running system. ;-)
 
 This is a beta version of xmlf90-1.2, which contains significant
 new features. Please see the file Tutorial/Guide.html and
