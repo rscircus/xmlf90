@@ -5,9 +5,7 @@ This project was mainly developed by
 * Alberto Garcia (SAX, XPATH, WXML, Overall design)
 * Jon Wakelin, Alberto Garcia (DOM subsystem)
 * Jon Wakelin, (CML writing subsystem)
-* Mart Reentmeester (STRINGS).
-
-New stuff coming:
+* Mart Reentmeester (STRINGS)
 * [Roland Siegbert](http://www.cats.rwth-aachen.de/Members/siegbert) (CMake migration).
 
 *Probably* it makes more sense to use the successor
