@@ -6,7 +6,7 @@ This project was mainly developed by
 * Jon Wakelin, Alberto Garcia (DOM subsystem)
 * Jon Wakelin, (CML writing subsystem)
 * Mart Reentmeester (STRINGS)
-* [Roland Siegbert](http://www.cats.rwth-aachen.de/Members/siegbert) (CMake migration).
+* [Roland Siegbert](http://www.cats.rwth-aachen.de/Members/siegbert) (CMake).
 
 *Probably* it makes more sense to use the successor
 [FoX](http://www1.gly.bris.ac.uk/~walker/FoX/), maintained by Andrew Walker.
